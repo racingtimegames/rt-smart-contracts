@@ -22,7 +22,9 @@ Transactions contain the transactions that various admins and users can use to p
 
 - transactions/scripts/ : This contains all the read-only Cadence scripts that are used to read information from the smart contract or from a resource in account storage.
 
-## RacingTime Item
+- examples/ : This directory is the code test unit.
+
+## RacingTime NFT
 
 In our mystery boxes campaign users can select several different tiers and receive multiple exclusive rewards in return. 
 Multiple NFTs can be minted from the same reward and each receives a serial number that indicates where in the edition it was minted.
@@ -40,5 +42,7 @@ pub resource NFT{
     // The token mint number
     // Otherwise known as the serial number
     pub let serialNumber: UInt32
+    // Image storage location
+    pub let ipfs: String   
 }
 ```
