@@ -1,55 +1,68 @@
 import NonFungibleToken from "./lib/NonFungibleToken.cdc"
 
-//
+// RacingTime
 // NFT items for RacingTime!
 //
-pub contract RacingTimeItem: NonFungibleToken {
-        // Events
-        //
-        pub event ContractInitialized()
-        pub event Withdraw(id: UInt64, from: Address?)
-        pub event Deposit(id: UInt64, to: Address?)
-        pub event Minted(id: UInt64, typeID: UInt32, rewardID: UInt32,serialNumber: UInt32)
+pub contract RacingTime: NonFungibleToken {
+    // Events
+    //
+    pub event ContractInitialized()
+    pub event Withdraw(id: UInt64, from: Address?)
+    pub event Deposit(id: UInt64, to: Address?)
+    pub event Minted(id: UInt64, typeID: UInt32, rewardID: UInt32,serialNumber: UInt32,ipfs: String)
+    pub event Burn(id: UInt64)
 
-        // Named Paths
-        //
-        pub let CollectionStoragePath: StoragePath
-        pub let CollectionPublicPath: PublicPath
-        pub let MinterStoragePath: StoragePath
+    // Named Paths
+    //
+    pub let CollectionStoragePath: StoragePath
+    pub let CollectionPublicPath: PublicPath
+    pub let MinterStoragePath: StoragePath
 
-        // The total number of tokens of this type in existence
-        pub var totalSupply: UInt64
+    // The total number of tokens of this type in existence
+    pub var totalSupply: UInt64
 
-        pub struct NFTData {
 
-            // The ID of the Reward that the NFT references
-            pub let rewardID: UInt32
-            // The token's type, e.g. 3 == ss
-            pub let typeID: UInt32
-            // The token mint number
-            // Otherwise known as the serial number
-            pub let serialNumber: UInt32
+    pub resource interface NFTPublic {
+        pub let id: UInt64
+        pub let data: NFTData
+    }
 
-            init(rewardID: UInt32,initTypeID: UInt32, serialNumber: UInt32) {
-                self.rewardID = rewardID
-                self.typeID = initTypeID
-                self.serialNumber = serialNumber
-            }
+    pub struct NFTData {
+
+        // The ID of the Reward that the NFT references
+        pub let rewardID: UInt32
+        // The token's type, e.g. 3 == ss
+        pub let typeID: UInt32
+        // The token mint number
+        // Otherwise known as the serial number
+        pub let serialNumber: UInt32
+        // Image storage location
+        pub let ipfs: String
+
+        init(rewardID: UInt32,initTypeID: UInt32, serialNumber: UInt32,ipfs: String) {
+            self.rewardID=rewardID
+            self.typeID=initTypeID
+            self.serialNumber=serialNumber
+            self.ipfs=ipfs
+        }
+    }
+
+    pub resource NFT: NonFungibleToken.INFT , NFTPublic {
+
+        // global unique NFT ID
+        pub let id: UInt64
+
+        pub let data: NFTData
+
+        init(initID: UInt64,nftData: NFTData) {
+            self.id = initID
+            self.data = nftData
         }
 
-        pub resource NFT: NonFungibleToken.INFT {
-
-            // global unique NFT ID
-            pub let id: UInt64
-
-            pub let data: NFTData
-
-            init(initID: UInt64,rewardID:UInt32,initTypeID: UInt32, serialNumber: UInt32) {
-                self.id = initID
-
-                self.data = NFTData(rewardID: rewardID,initTypeID: initTypeID ,serialNumber: serialNumber)
-            }
+        destroy() {
+            emit Burn(id: self.id)
         }
+    }
 
 
     // This is the interface that users can cast their RacingTime Collection as
@@ -57,14 +70,15 @@ pub contract RacingTimeItem: NonFungibleToken {
     // the details of RacingTime in the Collection.
     pub resource interface RacingTimeCollectionPublic {
         pub fun deposit(token: @NonFungibleToken.NFT)
+        pub fun depositBatch(cardCollection: @NonFungibleToken.Collection)
         pub fun getIDs(): [UInt64]
         pub fun borrowNFT(id: UInt64): &NonFungibleToken.NFT
-        pub fun borrowKittyItem(id: UInt64): &RacingTimeItem.NFT? {
+        pub fun borrowRacingTime(id: UInt64): &RacingTime.NFT? {
             // If the result isn't nil, the id of the returned reference
             // should be the same as the argument to the function
             post {
                 (result == nil) || (result?.id == id):
-                    "Cannot borrow KittyItem reference: The ID of the returned reference is incorrect"
+                    "Cannot borrow RacingTime reference: The ID of the returned reference is incorrect"
             }
         }
     }
@@ -94,7 +108,7 @@ pub contract RacingTimeItem: NonFungibleToken {
         // and adds the ID to the id array
         //
         pub fun deposit(token: @NonFungibleToken.NFT) {
-            let token <- token as! @RacingTimeItem.NFT
+            let token <- token as! @RacingTime.NFT
 
             let id: UInt64 = token.id
 
@@ -105,7 +119,27 @@ pub contract RacingTimeItem: NonFungibleToken {
 
             destroy oldToken
         }
+        // depositBatch
+        // This is primarily called by an Admin to
+        // deposit newly minted Cards into this Collection.
+        //
+        pub fun depositBatch(cardCollection: @NonFungibleToken.Collection) {
+            pre {
+                cardCollection.getIDs().length <= 100:
+                    "Too many cards being deposited. Must be less than or equal to 100"
+            }
 
+            // Get an array of the IDs to be deposited
+            let keys = cardCollection.getIDs()
+
+            // Iterate through the keys in the collection and deposit each one
+            for key in keys {
+                self.deposit(token: <-cardCollection.withdraw(withdrawID: key))
+            }
+
+            // Destroy the empty Collection
+            destroy cardCollection
+        }
         // getIDs
         // Returns an array of the IDs that are in the collection
         //
@@ -122,14 +156,14 @@ pub contract RacingTimeItem: NonFungibleToken {
         }
 
         // borrowRacingTime
-        // Gets a reference to an NFT in the collection as a RacingTimeItem,
+        // Gets a reference to an NFT in the collection as a RacingTime,
         // exposing all of its fields (including the typeID).
-        // This is safe as there are no functions that can be called on the RacingTimeItem.
+        // This is safe as there are no functions that can be called on the RacingTime.
         //
-        pub fun borrowKittyItem(id: UInt64): &RacingTimeItem.NFT? {
+        pub fun borrowRacingTime(id: UInt64): &RacingTime.NFT? {
             if self.ownedNFTs[id] != nil {
                 let ref = &self.ownedNFTs[id] as auth &NonFungibleToken.NFT
-                return ref as! &RacingTimeItem.NFT
+                return ref as! &RacingTime.NFT
             } else {
                 return nil
             }
@@ -164,14 +198,16 @@ pub contract RacingTimeItem: NonFungibleToken {
         // Mints a new NFT with a new ID
 		// and deposit it in the recipients collection using their collection reference
         //
-		pub fun mintNFT(recipient: &{NonFungibleToken.CollectionPublic}, data: NFTData) {
+		pub fun mintNFT(recipient: &{NonFungibleToken.CollectionPublic}, typeID: UInt32, rewardID: UInt32,serialNumber: UInt32,ipfs: String ) {
 
-            RacingTimeItem.totalSupply = RacingTimeItem.totalSupply + 1 as UInt64
+            RacingTime.totalSupply = RacingTime.totalSupply + (1 as UInt64)
 
-            emit Minted(id: RacingTimeItem.totalSupply, typeID: data.typeID,rewardID: data.rewardID, serialNumber: data.serialNumber)
-
+            emit Minted(id: RacingTime.totalSupply, typeID: typeID,rewardID: rewardID, serialNumber: serialNumber,ipfs: ipfs)
+//
 			// deposit it in the recipient's account using their reference
-			recipient.deposit(token: <-create RacingTimeItem.NFT(initID: RacingTimeItem.totalSupply, initTypeID: data.rewardID, rewardID: data.rewardID, serialNumber: data.serialNumber))
+			recipient.deposit(token: <-create RacingTime.NFT(initID: RacingTime.totalSupply,data: NFTData(
+                rewardID: rewardID, initTypeID: typeID, serialNumber: serialNumber,ipfs:ipfs
+            )))
 		}
 	}
     
@@ -181,9 +217,9 @@ pub contract RacingTimeItem: NonFungibleToken {
         // Initialize the total supply
         self.totalSupply = 0
         // Set our named paths
-        self.CollectionStoragePath = /storage/RacingTimeItemCollection
-        self.CollectionPublicPath = /public/RacingTimeItemCollection
-        self.MinterStoragePath = /storage/RacingTimeItemMinter
+        self.CollectionStoragePath = /storage/RacingTimeCollection
+        self.CollectionPublicPath = /public/RacingTimeCollection
+        self.MinterStoragePath = /storage/RacingTimeMinter
 
         // Create a Minter resource and save it to storage
         let minter <- create NFTMinter()
