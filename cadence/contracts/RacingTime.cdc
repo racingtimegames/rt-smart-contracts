@@ -2,10 +2,8 @@ import NonFungibleToken from "./lib/NonFungibleToken.cdc"
 
 // RacingTime
 // NFT items for RacingTime!
-//
 pub contract RacingTime: NonFungibleToken {
     // Events
-    //
     pub event ContractInitialized()
     pub event Withdraw(id: UInt64, from: Address?)
     pub event Deposit(id: UInt64, to: Address?)
@@ -13,7 +11,6 @@ pub contract RacingTime: NonFungibleToken {
     pub event Burn(id: UInt64)
 
     // Named Paths
-    //
     pub let CollectionStoragePath: StoragePath
     pub let CollectionPublicPath: PublicPath
     pub let MinterStoragePath: StoragePath
@@ -85,16 +82,13 @@ pub contract RacingTime: NonFungibleToken {
 
     // Collection
     // A collection of RacingTime NFTs owned by an account
-    //
     pub resource Collection: RacingTimeCollectionPublic, NonFungibleToken.Provider, NonFungibleToken.Receiver, NonFungibleToken.CollectionPublic {
         // dictionary of NFT conforming tokens
         // NFT is a resource type with an `UInt64` ID field
-        //
         pub var ownedNFTs: @{UInt64: NonFungibleToken.NFT}
 
         // withdraw
         // Removes an NFT from the collection and moves it to the caller
-        //
         pub fun withdraw(withdrawID: UInt64): @NonFungibleToken.NFT {
             let token <- self.ownedNFTs.remove(key: withdrawID) ?? panic("missing NFT")
 
@@ -106,7 +100,6 @@ pub contract RacingTime: NonFungibleToken {
         // deposit
         // Takes a NFT and adds it to the collections dictionary
         // and adds the ID to the id array
-        //
         pub fun deposit(token: @NonFungibleToken.NFT) {
             let token <- token as! @RacingTime.NFT
 
@@ -122,7 +115,6 @@ pub contract RacingTime: NonFungibleToken {
         // depositBatch
         // This is primarily called by an Admin to
         // deposit newly minted Cards into this Collection.
-        //
         pub fun depositBatch(cardCollection: @NonFungibleToken.Collection) {
             pre {
                 cardCollection.getIDs().length <= 100:
@@ -142,7 +134,6 @@ pub contract RacingTime: NonFungibleToken {
         }
         // getIDs
         // Returns an array of the IDs that are in the collection
-        //
         pub fun getIDs(): [UInt64] {
             return self.ownedNFTs.keys
         }
@@ -150,7 +141,6 @@ pub contract RacingTime: NonFungibleToken {
         // borrowNFT
         // Gets a reference to an NFT in the collection
         // so that the caller can read its metadata and call its methods
-        //
         pub fun borrowNFT(id: UInt64): &NonFungibleToken.NFT {
             return &self.ownedNFTs[id] as &NonFungibleToken.NFT
         }
@@ -159,7 +149,6 @@ pub contract RacingTime: NonFungibleToken {
         // Gets a reference to an NFT in the collection as a RacingTime,
         // exposing all of its fields (including the typeID).
         // This is safe as there are no functions that can be called on the RacingTime.
-        //
         pub fun borrowRacingTime(id: UInt64): &RacingTime.NFT? {
             if self.ownedNFTs[id] != nil {
                 let ref = &self.ownedNFTs[id] as auth &NonFungibleToken.NFT
@@ -175,7 +164,6 @@ pub contract RacingTime: NonFungibleToken {
         }
 
         // initializer
-        //
         init () {
             self.ownedNFTs <- {}
         }
@@ -183,7 +171,6 @@ pub contract RacingTime: NonFungibleToken {
 
     // createEmptyCollection
     // public function that anyone can call to create a new empty collection
-    //
     pub fun createEmptyCollection(): @NonFungibleToken.Collection {
         return <- create Collection()
     }
@@ -191,19 +178,13 @@ pub contract RacingTime: NonFungibleToken {
     // NFTMinter
     // Resource that an admin or something similar would own to be
     // able to mint new NFTs
-    //
 	pub resource NFTMinter {
-
-		// mintNFT
+        // mintNFT
         // Mints a new NFT with a new ID
 		// and deposit it in the recipients collection using their collection reference
-        //
 		pub fun mintNFT(recipient: &{NonFungibleToken.CollectionPublic}, typeID: UInt32, rewardID: UInt32,serialNumber: UInt32,ipfs: String ) {
-
             RacingTime.totalSupply = RacingTime.totalSupply + (1 as UInt64)
-
             emit Minted(id: RacingTime.totalSupply, typeID: typeID,rewardID: rewardID, serialNumber: serialNumber,ipfs: ipfs)
-//
 			// deposit it in the recipient's account using their reference
 			recipient.deposit(token: <-create RacingTime.NFT(initID: RacingTime.totalSupply,data: NFTData(
                 rewardID: rewardID, initTypeID: typeID, serialNumber: serialNumber,ipfs:ipfs
@@ -212,7 +193,6 @@ pub contract RacingTime: NonFungibleToken {
 	}
     
     // initializer
-    //
 	init() {
         // Initialize the total supply
         self.totalSupply = 0
