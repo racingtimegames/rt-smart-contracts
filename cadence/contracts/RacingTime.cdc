@@ -178,7 +178,7 @@ pub contract RacingTime: NonFungibleToken {
     // NFTMinter
     // Resource that an admin or something similar would own to be
     // able to mint new NFTs
-	pub resource NFTMinter {
+    pub resource NFTMinter {
         // mintNFT
         // Mints a new NFT with a new ID
 		// and deposit it in the recipients collection using their collection reference
@@ -189,11 +189,11 @@ pub contract RacingTime: NonFungibleToken {
 			recipient.deposit(token: <-create RacingTime.NFT(initID: RacingTime.totalSupply,data: NFTData(
                 rewardID: rewardID, initTypeID: typeID, serialNumber: serialNumber,ipfs:ipfs
             )))
-		}
-	}
+        }
+    }
     
     // initializer
-	init() {
+    init() {
         // Initialize the total supply
         self.totalSupply = 0
         // Set our named paths
@@ -207,6 +207,5 @@ pub contract RacingTime: NonFungibleToken {
         self.account.save(<-minter, to: self.MinterStoragePath)
 
         emit ContractInitialized()
-	}
+    }
 }
- 
