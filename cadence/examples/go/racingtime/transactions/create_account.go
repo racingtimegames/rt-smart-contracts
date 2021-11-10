@@ -24,7 +24,7 @@ func CreateAddress(seed string, sigAlgo crypto.SignatureAlgorithm, hashAlgo cryp
 		SetHashAlgo(hashAlgo).
 		SetWeight(flow.AccountKeyWeightThreshold)
 
-	serviceAcctAddr, serviceAcctKey, serviceSigner := lib.ServiceAccount(racingtime.FlowClient, crypto.ECDSA_P256, crypto.SHA3_256, 0, racingtime.Address, racingtime.PrivateKey)
+	serviceAcctAddr, serviceAcctKey, serviceSigner := lib.ServiceAccount(racingtime.FlowClient, racingtime.SigAlgo, racingtime.HashAlgo, racingtime.KeyIndex, racingtime.Address, racingtime.PrivateKey)
 	referenceBlockID := lib.GetReferenceBlockId(racingtime.FlowClient)
 	createAccountTx := templates.CreateAccount([]*flow.AccountKey{myAcctKey}, nil, serviceAcctAddr)
 	createAccountTx.SetProposalKey(
